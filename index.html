@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>bStocks Ações</title>
+    <link rel="stylesheet" href="src/css/styles.css">
+    <script>
+        const requisicao = require('request');
+        const url = 'https://api.iextrading.com/1.0/ref-data/symbols';
+        var listaSimbolos = [];
+
+        requisicao(url, (erro, resposta, corpo) => {
+            corpo = JSON.parse(corpo);
+            for (i = 0; i < corpo.length; i++){
+                listaSimbolos.push(corpo[i].symbol)
+            }
+            let combobox = document.getElementById("combobox");
+            for (i = 0; i < listaSimbolos.length; i++){
+                let opcao = document.createElement("option");
+                opcao.value = listaSimbolos[i].toLowerCase();
+                opcao.text = listaSimbolos[i];
+                if (i == 0){
+                    opcao.defaultSelected = true;
+                }
+                combobox.appendChild(opcao);
+            }
+        })
+    </script>
+  </head>
+  <body>
+    <h3>Preço atual da ação: <select class="combobox" id="combobox"></select></h3>
+    <div class="tipo" id="empresa"></div>
+    <div class="preco" id="preco"></div>
+    <div class="tipo" id="tipo"></div>
+    <div class="subiu-desceu" id="historicoPreco"></div>
+
+
+    <script>
+            var solicitacao = require('request');
+            const baseURL = 'https://api.iextrading.com/1.0';
+            let simbolo = document.getElementById("combobox");
+            let urlAnterior = "";
+            setTimeout( () => {
+                setInterval( () => {
+                    let url = `${baseURL}/stock/${simbolo.value}/book`;
+                    if (urlAnterior != url) {
+                        setTimeout(limparHistorico(), 100);
+                    }
+                    solicitacao(url, (erro, resposta, corpo) => {
+                        corpo = JSON.parse(corpo);
+                        novoPreco(corpo);
+                    });
+                    urlAnterior = url;
+                }, 2000);
+                var precoAnterior;
+                function novoPreco(obj){
+                    let precoAtual;
+                    var { iexRealtimePrice, delayedPrice, closed, companyName } = obj.quote;
+                    document.getElementById("empresa").innerHTML = companyName;
+                    if (iexRealtimePrice == 0 && delayedPrice == 0) {
+                        precoAtual = closed;
+                        document.getElementById("tipo").innerHTML = "Fechado";
+                    }
+                    else if (iexRealtimePrice == 0){
+                        precoAtual = delayedPrice;
+                        document.getElementById("tipo").innerHTML = "Atrasado";
+                    }
+                    else {
+                        precoAtual = iexRealtimePrice;
+                        document.getElementById("tipo").innerHTML = "Tempo real";
+                    }
+                    var historico = document.getElementById('historicoPreco');
+                    if (precoAnterior < precoAtual){
+                        var novoElemento = "▲ ";
+                        var wrap = document.createElement('span');
+                        wrap.className = "subiu";
+                    }
+                    else if (precoAnterior == precoAtual){
+                        var novoElemento = "‒ ";
+                        var wrap = document.createElement('span');
+                        wrap.className = "semAlteracao";
+
+                    }
+                    else {
+                        var novoElemento = "▼ ";
+                        var wrap = document.createElement('span');
+                        wrap.className = "desceu";
+                    }
+                    historico.appendChild(wrap);
+                    var textNode = document.createTextNode(novoElemento);
+                    wrap.appendChild(textNode);
+                    var nodeList = historico.getElementsByTagName('span').length;
+                    if (nodeList == 6){
+                        historico.children[0].remove();
+                    }
+                    document.getElementById("preco").innerHTML = `US$ ${precoAtual.toFixed(2)}`;
+                    precoAnterior = precoAtual;
+                }
+
+                function limparHistorico(){
+                    var historico = document.getElementById('historicoPreco');
+                    for (i = 0; i < historico.getElementsByTagName('span').length; i++){
+                        historico.children[i].remove();
+                    }
+                }
+            }, 200);
+            
+    
+        </script>
+    <script>
+        require('./renderer.js')
+    </script>
+  </body>
+</html>
